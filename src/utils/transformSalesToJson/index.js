@@ -26,10 +26,15 @@ const strToDate = (dtStr, hourStr) => {
     else {
         timeParts = [`0${hourStr.substring(0, 1)}`, hourStr.substring(1)];
     }
-    const fechaFinal = new Date(Number(dateParts[2]), Number(dateParts[1]) - 1, Number(dateParts[0]), Number(timeParts[0]), Number(timeParts[1]));
+    const anyo = Number(dateParts[2]);
+    const mes = Number(dateParts[1]) - 1;
+    const dia = Number(dateParts[0]);
+    const hora = Number(timeParts[0]);
+    const min = Number(timeParts[1]);
+    const fechaFinal = new Date(anyo, mes, dia, hora, min, 0, 0);
     return fechaFinal;
 };
-const VentaXLSXToJson = (fileName) => {
+const VentaXLSXToMap = (fileName) => {
     let workSheets = {};
     let sName = "";
     const workbook = xlsx_1.default.readFile(`${fileName}`);
@@ -48,7 +53,7 @@ const VentaXLSXToJson = (fileName) => {
     }
     return ventasMap;
 };
-const AddProductosToVentas = (ventas, fileName) => {
+const ProductosCSVToMap = (fileName) => {
     let workSheets = {};
     let sName = "";
     const workbook = xlsx_1.default.readFile(`${fileName}`);
@@ -56,10 +61,37 @@ const AddProductosToVentas = (ventas, fileName) => {
         sName = sheetName;
         workSheets[sheetName] = xlsx_1.default.utils.sheet_to_json(workbook.Sheets[sheetName]);
     }
+    const productos = workSheets[sName];
+    let prodMap = new Map();
+    for (let index = 0; index < productos.length; index++) {
+        const producto = productos[index];
+        const updatedProd = CrearProducto(producto);
+        if (updatedProd) {
+            prodMap.set(updatedProd.ean, updatedProd);
+        }
+        else {
+            console.log("Producto no creado correctamente");
+        }
+    }
+    return prodMap;
+};
+const AddProductosToVentas = (ventas, productosVenta, productosDB) => {
+    let workSheets = {};
+    let sName = "";
+    const workbook = xlsx_1.default.readFile(`${productosVenta}`);
+    for (const sheetName of workbook.SheetNames) {
+        sName = sheetName;
+        workSheets[sheetName] = xlsx_1.default.utils.sheet_to_json(workbook.Sheets[sheetName]);
+    }
     const prodPorVentas = workSheets[sName];
     for (let index = 0; index < prodPorVentas.length; index++) {
         const productoVendido = prodPorVentas[index];
-        const prod = CrearProductoVendido(productoVendido);
+        const prodEnDB = productosDB.get(String(productoVendido.ean));
+        if (!prodEnDB) {
+            // console.log(String(productoVendido.ean))
+            continue;
+        }
+        const prod = CrearProductoVendido(productoVendido, prodEnDB);
         let venta = ventas.get(prod.idVenta);
         if (venta) {
             venta.productos.push(prod);
@@ -74,10 +106,8 @@ const CrearVenta = (v) => {
     }
     let tipo = v.isTarjeta == 1 ? TipoVenta.Tarjeta : TipoVenta.Efectivo;
     let cambio = v.cambio;
-    let entregado = v.entregado;
     if (v.cambio < 0) {
         cambio = 0;
-        entregado = v.pagado;
         tipo = TipoVenta.CobroRapido;
     }
     if (v.cambio > 0 && v.cambio < 0.01) {
@@ -97,7 +127,7 @@ const CrearVenta = (v) => {
         descuentoEfectivo: v.dto || 0,
         descuentoPorcentaje: v.dto || 0,
         dineroEntregadoTarjeta: tipo === TipoVenta.Tarjeta ? v.entregado : 0,
-        dineroEntregadoEfectivo: tipo === TipoVenta.Tarjeta ? 0 : v.entregado,
+        dineroEntregadoEfectivo: tipo === TipoVenta.Tarjeta ? 0 : (v.entregado || v.pagado),
         precioVentaTotalSinDto: v.total,
         modificadoPor: {
             apellidos: "",
@@ -121,27 +151,46 @@ const CrearVenta = (v) => {
     };
     return updatedVenta;
 };
-const CrearProductoVendido = (p) => {
+const CrearProducto = (p) => {
+    const prod = {
+        _id: p._id,
+        alta: p.alta,
+        cantidad: p.cantidad,
+        cantidadRestock: p.cantidadRestock,
+        ean: p.ean,
+        familia: p.familia,
+        iva: p.iva,
+        margen: p.margen,
+        nombre: p.nombre,
+        precioCompra: p.precioCompra,
+        precioVenta: p.precioVenta,
+        proveedor: p.proveedor || "",
+    };
+    return prod;
+};
+const CrearProductoVendido = (p, productoEnDb) => {
     const prod = {
         idVenta: p.idVenta,
-        idProducto: p.idProducto,
+        idProducto: p.productoEnDb._id,
         nombre: p.nombre,
         cantidadVendida: p.cantidadVendida,
+        familia: p.familia,
         dto: p.dto,
         ean: p.ean,
         iva: p.iva,
-        precioCompra: p.precioSinIva,
+        precioCompra: productoEnDb.precioCompra || (p.precioConIva / (p.margen / 100) + 1) / ((p.iva / 100) + 1),
         precioVenta: p.precioConIva,
-        precioFinal: p.precioConIva,
+        precioFinal: p.precioConIva - (p.precioConIva * (p.dto / 100)),
         nombreProveedor: p.nombreProveedor || "",
         margen: p.margen
     };
     return prod;
 };
-let ventasMap = VentaXLSXToJson("ventas2.xlsx");
-ventasMap = AddProductosToVentas(ventasMap, "productosPorVenta2.xlsx");
+let productosMap = ProductosCSVToMap("productos.csv");
+let ventasMap = VentaXLSXToMap("ventas.xlsx");
+ventasMap = AddProductosToVentas(ventasMap, "productosPorVenta.xlsx", productosMap);
 const ventas = Array.from(ventasMap.values());
-fs_1.default.writeFile("ventasJsonTPV2.json", JSON.stringify(ventas), function (err) {
+fs_1.default.writeFile("ventasJsonTPV.json", JSON.stringify(ventas), function (err) {
     if (err) {
         console.log(err);
     }
