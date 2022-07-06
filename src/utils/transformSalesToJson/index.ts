@@ -142,6 +142,7 @@ const CrearProductoVendido = (p: any): ProductoVendido => {
         iva: p.iva,
         precioCompra: p.precioSinIva,
         precioVenta: p.precioConIva,
+        precioFinal: p.precioConIva,
         nombreProveedor: p.nombreProveedor || "",
         margen: p.margen
     }

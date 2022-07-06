@@ -13,6 +13,7 @@ export interface ProductoVendido {
     ean: string,
     precioCompra: number,
     precioVenta: number,
+    precioFinal: number,
     nombreProveedor?: string
     cantidadVendida: number
     dto: number
