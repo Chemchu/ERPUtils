@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.TipoVenta = void 0;
+exports.CrearProductoVendido = exports.CrearProducto = exports.CrearVenta = exports.AddProductosToVentas = exports.ProductosCSVToMap = exports.VentaXLSXToMap = exports.strToDate = exports.TipoVenta = void 0;
 const xlsx_1 = __importDefault(require("xlsx"));
 const fs_1 = __importDefault(require("fs"));
 var TipoVenta;
@@ -34,6 +34,7 @@ const strToDate = (dtStr, hourStr) => {
     const fechaFinal = new Date(anyo, mes, dia, hora, min, 0, 0);
     return fechaFinal;
 };
+exports.strToDate = strToDate;
 const VentaXLSXToMap = (fileName) => {
     let workSheets = {};
     let sName = "";
@@ -46,13 +47,14 @@ const VentaXLSXToMap = (fileName) => {
     let ventasMap = new Map();
     for (let index = 0; index < ventas.length; index++) {
         const venta = ventas[index];
-        const updatedVenta = CrearVenta(venta);
+        const updatedVenta = (0, exports.CrearVenta)(venta);
         if (updatedVenta) {
             ventasMap.set(updatedVenta.id, updatedVenta);
         }
     }
     return ventasMap;
 };
+exports.VentaXLSXToMap = VentaXLSXToMap;
 const ProductosCSVToMap = (fileName) => {
     let workSheets = {};
     let sName = "";
@@ -65,7 +67,7 @@ const ProductosCSVToMap = (fileName) => {
     let prodMap = new Map();
     for (let index = 0; index < productos.length; index++) {
         const producto = productos[index];
-        let updatedProd = CrearProducto(producto);
+        let updatedProd = (0, exports.CrearProducto)(producto);
         if (updatedProd) {
             if (prodMap.has(updatedProd.ean)) {
                 // Asignar "EAN" único
@@ -76,6 +78,7 @@ const ProductosCSVToMap = (fileName) => {
     }
     return prodMap;
 };
+exports.ProductosCSVToMap = ProductosCSVToMap;
 const AddProductosToVentas = (ventas, productosVenta, productosDB) => {
     let workSheets = {};
     let sName = "";
@@ -96,7 +99,7 @@ const AddProductosToVentas = (ventas, productosVenta, productosDB) => {
         if (!producto) {
             continue;
         }
-        const prod = CrearProductoVendido(productoVendido, producto); // Cambiar la _id por la interna de mongo
+        const prod = (0, exports.CrearProductoVendido)(productoVendido, producto); // Cambiar la _id por la interna de mongo
         let venta = ventas.get(prod.idVenta);
         if (venta) {
             venta.productos.push(prod);
@@ -105,6 +108,7 @@ const AddProductosToVentas = (ventas, productosVenta, productosDB) => {
     }
     return ventas;
 };
+exports.AddProductosToVentas = AddProductosToVentas;
 const CrearVenta = (v) => {
     if (v.total <= 0) {
         return undefined;
@@ -118,7 +122,7 @@ const CrearVenta = (v) => {
     if (v.cambio > 0 && v.cambio < 0.01) {
         cambio = 0;
     }
-    const fecha = strToDate(v.fecha, String(v.hora));
+    const fecha = (0, exports.strToDate)(v.fecha, String(v.hora));
     const updatedVenta = {
         productos: [],
         id: v.id,
@@ -156,6 +160,7 @@ const CrearVenta = (v) => {
     };
     return updatedVenta;
 };
+exports.CrearVenta = CrearVenta;
 const CrearProducto = (p) => {
     const prod = {
         _id: p._id,
@@ -173,6 +178,7 @@ const CrearProducto = (p) => {
     };
     return prod;
 };
+exports.CrearProducto = CrearProducto;
 const CrearProductoVendido = (productoEnVenta, productoEnDb) => {
     const prod = {
         idVenta: productoEnVenta.idVenta,
@@ -191,9 +197,10 @@ const CrearProductoVendido = (productoEnVenta, productoEnDb) => {
     };
     return prod;
 };
-let productosMap = ProductosCSVToMap("productos.csv");
-let ventasMap = VentaXLSXToMap("ventas.xlsx");
-ventasMap = AddProductosToVentas(ventasMap, "productosPorVenta.xlsx", productosMap);
+exports.CrearProductoVendido = CrearProductoVendido;
+let productosMap = (0, exports.ProductosCSVToMap)("productos.csv");
+let ventasMap = (0, exports.VentaXLSXToMap)("ventas.xlsx");
+ventasMap = (0, exports.AddProductosToVentas)(ventasMap, "productosPorVenta.xlsx", productosMap);
 const ventas = Array.from(ventasMap.values());
 const prodEanFixed = Array.from(productosMap.values());
 fs_1.default.writeFile("productosEanFixed.csv", JSON.stringify(prodEanFixed), function (err) {

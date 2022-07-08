@@ -6,10 +6,26 @@ export interface ProductoXLSX {
     Diferencia?: number | string
 }
 
+export interface Producto {
+    _id: string
+    nombre: string
+    proveedor: string
+    familia: string
+    precioVenta: number
+    precioCompra: number
+    iva: number
+    ean: string
+    margen: number
+    alta: boolean
+    cantidad: number
+    cantidadRestock: number
+}
+
 export interface ProductoVendido {
     idVenta: string,
-    idProducto: string,
+    _id: string,
     nombre: string,
+    familia: string,
     ean: string,
     precioCompra: number,
     precioVenta: number,
@@ -21,6 +37,21 @@ export interface ProductoVendido {
     margen: number
 }
 
+export interface Empleado {
+    nombre: string,
+    apellidos: string,
+    dni: string,
+    rol: string,
+    email: string
+}
+
+export interface Cliente {
+    nombre: string,
+    nif: string,
+    calle: string,
+    cp: string
+}
+
 export interface Venta {
     id: string,
     productos: ProductoVendido[]
@@ -29,26 +60,9 @@ export interface Venta {
     precioVentaTotalSinDto: number,
     precioVentaTotal: number,
     cambio: number,
-    cliente: {
-        nombre: string,
-        nif: string,
-        calle: string,
-        cp: string
-    }
-    vendidoPor: {
-        nombre: string,
-        apellidos: string,
-        dni: string,
-        rol: string,
-        email: string
-    },
-    modificadoPor: {
-        nombre: string,
-        apellidos: string,
-        dni: string,
-        rol: string,
-        email: string,
-    },
+    cliente: Cliente
+    vendidoPor: Empleado,
+    modificadoPor: Empleado,
     tipo: string,
     descuentoEfectivo: number,
     descuentoPorcentaje: number,

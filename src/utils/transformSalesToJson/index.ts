@@ -9,7 +9,7 @@ export enum TipoVenta {
 }
 
 /** Convierte strings del tipo 'dd/mm/aa hh:mm' a un Date */
-const strToDate = (dtStr: string, hourStr: string): Date => {
+export const strToDate = (dtStr: string, hourStr: string): Date => {
     if (!dtStr) throw "El argumento dtStr no puede estar vacío";
     if (!hourStr) throw "El argumento hourStr no puede estar vacío";
 
@@ -33,7 +33,7 @@ const strToDate = (dtStr: string, hourStr: string): Date => {
     return fechaFinal;
 }
 
-const VentaXLSXToMap = (fileName: string): Map<string, Venta> => {
+export const VentaXLSXToMap = (fileName: string): Map<string, Venta> => {
     let workSheets: XLSX.WorkSheet = {}
     let sName = "";
     const workbook: XLSX.WorkBook = XLSX.readFile(`${fileName}`);
@@ -56,7 +56,7 @@ const VentaXLSXToMap = (fileName: string): Map<string, Venta> => {
     return ventasMap;
 }
 
-const ProductosCSVToMap = (fileName: string): Map<string, Producto> => {
+export const ProductosCSVToMap = (fileName: string): Map<string, Producto> => {
     let workSheets: XLSX.WorkSheet = {}
     let sName = "";
     const workbook: XLSX.WorkBook = XLSX.readFile(`${fileName}`);
@@ -82,7 +82,7 @@ const ProductosCSVToMap = (fileName: string): Map<string, Producto> => {
     return prodMap;
 }
 
-const AddProductosToVentas = (ventas: Map<string, Venta>, productosVenta: string, productosDB: Map<string, Producto>): Map<string, Venta> => {
+export const AddProductosToVentas = (ventas: Map<string, Venta>, productosVenta: string, productosDB: Map<string, Producto>): Map<string, Venta> => {
     let workSheets: XLSX.WorkSheet = {}
     let sName = "";
     const workbook: XLSX.WorkBook = XLSX.readFile(`${productosVenta}`);
@@ -118,7 +118,7 @@ const AddProductosToVentas = (ventas: Map<string, Venta>, productosVenta: string
     return ventas;
 }
 
-const CrearVenta = (v: any): Venta | undefined => {
+export const CrearVenta = (v: any): Venta | undefined => {
     if (v.total <= 0) { return undefined }
 
     let tipo: TipoVenta = v.isTarjeta == 1 ? TipoVenta.Tarjeta : TipoVenta.Efectivo;
@@ -172,7 +172,7 @@ const CrearVenta = (v: any): Venta | undefined => {
     return updatedVenta;
 }
 
-const CrearProducto = (p: any): Producto => {
+export const CrearProducto = (p: any): Producto => {
     const prod: Producto = {
         _id: p._id,
         alta: p.alta,
@@ -191,7 +191,7 @@ const CrearProducto = (p: any): Producto => {
     return prod;
 }
 
-const CrearProductoVendido = (productoEnVenta: any, productoEnDb: Producto): ProductoVendido => {
+export const CrearProductoVendido = (productoEnVenta: any, productoEnDb: Producto): ProductoVendido => {
     const prod: ProductoVendido = {
         idVenta: productoEnVenta.idVenta,
         _id: productoEnDb._id,
