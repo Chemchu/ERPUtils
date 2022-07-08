@@ -26,7 +26,7 @@ const strToDate = (dtStr, hourStr) => {
     else {
         timeParts = [`0${hourStr.substring(0, 1)}`, hourStr.substring(1)];
     }
-    const anyo = Number(dateParts[2]);
+    const anyo = dateParts[2].length < 3 ? Number("20" + dateParts[2]) : Number(dateParts[2]);
     const mes = Number(dateParts[1]) - 1;
     const dia = Number(dateParts[0]);
     const hora = Number(timeParts[0]);
@@ -65,13 +65,14 @@ const ProductosCSVToMap = (fileName) => {
     let prodMap = new Map();
     for (let index = 0; index < productos.length; index++) {
         const producto = productos[index];
-        const updatedProd = CrearProducto(producto);
+        let updatedProd = CrearProducto(producto);
         if (updatedProd) {
-            prodMap.set(updatedProd.ean, updatedProd);
+            if (prodMap.has(updatedProd.ean)) {
+                // Asignar "EAN" único
+                updatedProd.ean = updatedProd.nombre.replace(/ /g, "_");
+            }
         }
-        else {
-            console.log("Producto no creado correctamente");
-        }
+        prodMap.set(updatedProd.ean, updatedProd);
     }
     return prodMap;
 };
@@ -86,12 +87,16 @@ const AddProductosToVentas = (ventas, productosVenta, productosDB) => {
     const prodPorVentas = workSheets[sName];
     for (let index = 0; index < prodPorVentas.length; index++) {
         const productoVendido = prodPorVentas[index];
-        const prodEnDB = productosDB.get(String(productoVendido.ean));
-        if (!prodEnDB) {
-            // console.log(String(productoVendido.ean))
+        if (!productoVendido.nombre) {
             continue;
         }
-        const prod = CrearProductoVendido(productoVendido, prodEnDB);
+        const prodEnDBEAN = productosDB.get(productoVendido.ean);
+        const prodEnDBNombre = productosDB.get(productoVendido.nombre.replace(/ /g, "_"));
+        const producto = prodEnDBEAN ? prodEnDBEAN : prodEnDBNombre;
+        if (!producto) {
+            continue;
+        }
+        const prod = CrearProductoVendido(productoVendido, producto); // Cambiar la _id por la interna de mongo
         let venta = ventas.get(prod.idVenta);
         if (venta) {
             venta.productos.push(prod);
@@ -126,7 +131,7 @@ const CrearVenta = (v) => {
         },
         descuentoEfectivo: v.dto || 0,
         descuentoPorcentaje: v.dto || 0,
-        dineroEntregadoTarjeta: tipo === TipoVenta.Tarjeta ? v.entregado : 0,
+        dineroEntregadoTarjeta: tipo === TipoVenta.Tarjeta ? v.pagado : 0,
         dineroEntregadoEfectivo: tipo === TipoVenta.Tarjeta ? 0 : (v.entregado || v.pagado),
         precioVentaTotalSinDto: v.total,
         modificadoPor: {
@@ -157,7 +162,7 @@ const CrearProducto = (p) => {
         alta: p.alta,
         cantidad: p.cantidad,
         cantidadRestock: p.cantidadRestock,
-        ean: p.ean,
+        ean: String(p.ean),
         familia: p.familia,
         iva: p.iva,
         margen: p.margen,
@@ -168,21 +173,21 @@ const CrearProducto = (p) => {
     };
     return prod;
 };
-const CrearProductoVendido = (p, productoEnDb) => {
+const CrearProductoVendido = (productoEnVenta, productoEnDb) => {
     const prod = {
-        idVenta: p.idVenta,
-        idProducto: p.productoEnDb._id,
-        nombre: p.nombre,
-        cantidadVendida: p.cantidadVendida,
-        familia: p.familia,
-        dto: p.dto,
-        ean: p.ean,
-        iva: p.iva,
-        precioCompra: productoEnDb.precioCompra || (p.precioConIva / (p.margen / 100) + 1) / ((p.iva / 100) + 1),
-        precioVenta: p.precioConIva,
-        precioFinal: p.precioConIva - (p.precioConIva * (p.dto / 100)),
-        nombreProveedor: p.nombreProveedor || "",
-        margen: p.margen
+        idVenta: productoEnVenta.idVenta,
+        _id: productoEnDb._id,
+        nombre: productoEnVenta.nombre,
+        cantidadVendida: productoEnVenta.cantidadVendida,
+        familia: productoEnVenta.familia,
+        dto: productoEnVenta.dto,
+        ean: productoEnVenta.ean,
+        iva: productoEnVenta.iva,
+        precioCompra: productoEnDb.precioCompra || (productoEnVenta.precioConIva / (productoEnVenta.margen / 100) + 1) / ((productoEnVenta.iva / 100) + 1),
+        precioVenta: productoEnVenta.precioConIva,
+        precioFinal: productoEnVenta.precioConIva - (productoEnVenta.precioConIva * (productoEnVenta.dto / 100)),
+        nombreProveedor: productoEnVenta.nombreProveedor || "",
+        margen: productoEnVenta.margen
     };
     return prod;
 };
@@ -190,6 +195,12 @@ let productosMap = ProductosCSVToMap("productos.csv");
 let ventasMap = VentaXLSXToMap("ventas.xlsx");
 ventasMap = AddProductosToVentas(ventasMap, "productosPorVenta.xlsx", productosMap);
 const ventas = Array.from(ventasMap.values());
+const prodEanFixed = Array.from(productosMap.values());
+fs_1.default.writeFile("productosEanFixed.csv", JSON.stringify(prodEanFixed), function (err) {
+    if (err) {
+        console.log(err);
+    }
+});
 fs_1.default.writeFile("ventasJsonTPV.json", JSON.stringify(ventas), function (err) {
     if (err) {
         console.log(err);
