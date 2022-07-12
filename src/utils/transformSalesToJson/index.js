@@ -83,6 +83,7 @@ const AddProductosToVentas = (ventas, productosVenta, productosDB) => {
     let workSheets = {};
     let sName = "";
     const workbook = xlsx_1.default.readFile(`${productosVenta}`);
+    const ventasUpdated = new Map();
     for (const sheetName of workbook.SheetNames) {
         sName = sheetName;
         workSheets[sheetName] = xlsx_1.default.utils.sheet_to_json(workbook.Sheets[sheetName]);
@@ -93,6 +94,9 @@ const AddProductosToVentas = (ventas, productosVenta, productosDB) => {
         if (!productoVendido.nombre) {
             continue;
         }
+        if (!productoVendido.ean) {
+            continue;
+        }
         const prodEnDBEAN = productosDB.get(productoVendido.ean);
         const prodEnDBNombre = productosDB.get(productoVendido.nombre.replace(/ /g, "_"));
         const producto = prodEnDBEAN ? prodEnDBEAN : prodEnDBNombre;
@@ -100,13 +104,13 @@ const AddProductosToVentas = (ventas, productosVenta, productosDB) => {
             continue;
         }
         const prod = (0, exports.CrearProductoVendido)(productoVendido, producto); // Cambiar la _id por la interna de mongo
-        let venta = ventas.get(prod.idVenta);
+        const venta = ventas.get(prod.idVenta);
         if (venta) {
             venta.productos.push(prod);
-            ventas.set(venta.id, venta);
+            ventasUpdated.set(venta.id, venta);
         }
     }
-    return ventas;
+    return ventasUpdated;
 };
 exports.AddProductosToVentas = AddProductosToVentas;
 const CrearVenta = (v) => {
@@ -185,7 +189,7 @@ const CrearProductoVendido = (productoEnVenta, productoEnDb) => {
         _id: productoEnDb._id,
         nombre: productoEnVenta.nombre,
         cantidadVendida: productoEnVenta.cantidadVendida,
-        familia: productoEnVenta.familia,
+        familia: productoEnDb.familia,
         dto: productoEnVenta.dto,
         ean: productoEnVenta.ean,
         iva: productoEnVenta.iva,
