@@ -12,7 +12,6 @@ var TipoVenta;
     TipoVenta["Tarjeta"] = "Tarjeta";
     TipoVenta["Efectivo"] = "Efectivo";
 })(TipoVenta = exports.TipoVenta || (exports.TipoVenta = {}));
-/** Convierte strings del tipo 'dd/mm/aa hh:mm' a un Date */
 const strToDate = (dtStr, hourStr) => {
     if (!dtStr)
         throw "El argumento dtStr no puede estar vacío";
@@ -69,12 +68,11 @@ const ProductosCSVToMap = (fileName) => {
         const producto = productos[index];
         let updatedProd = (0, exports.CrearProducto)(producto);
         if (updatedProd) {
-            if (prodMap.has(updatedProd.ean)) {
-                // Asignar "EAN" único
-                updatedProd.ean = updatedProd.nombre.replace(/ /g, "_");
-            }
+            // if (prodMap.has(updatedProd.ean)) {
+            //     updatedProd.ean = updatedProd.nombre + "_"; // Asignar "EAN" único
+            // }
+            prodMap.set(updatedProd.ean, updatedProd);
         }
-        prodMap.set(updatedProd.ean, updatedProd);
     }
     return prodMap;
 };
@@ -98,8 +96,11 @@ const AddProductosToVentas = (ventas, productosVenta, productosDB) => {
             continue;
         }
         const prodEnDBEAN = productosDB.get(productoVendido.ean);
-        const prodEnDBNombre = productosDB.get(productoVendido.nombre.replace(/ /g, "_"));
-        const producto = prodEnDBEAN ? prodEnDBEAN : prodEnDBNombre;
+        const prodEnDBNombre = productosDB.get(productoVendido.nombre + "_");
+        let producto = prodEnDBEAN ? prodEnDBEAN : prodEnDBNombre;
+        if (!producto) {
+            producto = productoVendido;
+        }
         if (!producto) {
             continue;
         }
@@ -166,24 +167,30 @@ const CrearVenta = (v) => {
 };
 exports.CrearVenta = CrearVenta;
 const CrearProducto = (p) => {
+    const ean = p.EAN || p.ean;
     const prod = {
         _id: p._id,
-        alta: p.alta,
-        cantidad: p.cantidad,
-        cantidadRestock: p.cantidadRestock,
-        ean: String(p.ean),
-        familia: p.familia,
-        iva: p.iva,
-        margen: p.margen,
-        nombre: p.nombre,
-        precioCompra: p.precioCompra,
-        precioVenta: p.precioVenta,
-        proveedor: p.proveedor || "",
+        nombre: p.nombre || p.NOMBRE,
+        familia: p.familia || p.FAMILIA,
+        precioCompra: p.precioCompra || p.PRECIO_COMPRA,
+        precioVenta: p.precioVenta || p.PRECIO_VENTA,
+        iva: p.iva || p.IVA,
+        margen: p.margen || p.MARGEN,
+        ean: String(ean),
+        cantidad: p.cantidad || p.CANTIDAD,
+        cantidadRestock: p.cantidadRestock || p.CANTIDAD_RESTOCK,
+        proveedor: p.proveedor || "" || p.NOMBRE_PROV,
+        alta: p.alta || p.ALTA || true,
     };
     return prod;
 };
 exports.CrearProducto = CrearProducto;
 const CrearProductoVendido = (productoEnVenta, productoEnDb) => {
+    // const precioCompra = productoEnDb.precioCompra || (productoEnVenta.precioConIva / (productoEnVenta.margen / 100) + 1) / ((productoEnVenta.iva / 100) + 1)
+    const precioCompra = productoEnDb.precioCompra;
+    if (!precioCompra) {
+        //console.log(productoEnDb);
+    }
     const prod = {
         idVenta: productoEnVenta.idVenta,
         _id: productoEnDb._id,
@@ -193,7 +200,7 @@ const CrearProductoVendido = (productoEnVenta, productoEnDb) => {
         dto: productoEnVenta.dto,
         ean: productoEnVenta.ean,
         iva: productoEnVenta.iva,
-        precioCompra: productoEnDb.precioCompra || (productoEnVenta.precioConIva / (productoEnVenta.margen / 100) + 1) / ((productoEnVenta.iva / 100) + 1),
+        precioCompra: precioCompra,
         precioVenta: productoEnVenta.precioConIva,
         precioFinal: productoEnVenta.precioConIva - (productoEnVenta.precioConIva * (productoEnVenta.dto / 100)),
         nombreProveedor: productoEnVenta.nombreProveedor || "",

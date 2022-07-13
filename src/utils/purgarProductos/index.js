@@ -5,6 +5,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const transformSalesToJson_1 = require("../transformSalesToJson");
 const fs_1 = __importDefault(require("fs"));
+const xlsx_1 = __importDefault(require("xlsx"));
 const PurgarProductos = (productosEnDb, ventas) => {
     const productosVendidos = new Map();
     for (let i = 0; i < ventas.length; i++) {
@@ -39,7 +40,9 @@ ventasMap.forEach((venta, id) => {
     ventas.push(venta);
 });
 const productosPurgados = PurgarProductos(prodMap, ventas);
-fs_1.default.writeFile("productosPurgados.json", JSON.stringify(productosPurgados), function (err) {
+const productosWorksheet = xlsx_1.default.utils.json_to_sheet(productosPurgados);
+const csv = xlsx_1.default.utils.sheet_to_csv(productosWorksheet);
+fs_1.default.writeFile("productosPurgados.csv", csv, function (err) {
     if (err) {
         console.log(err);
     }

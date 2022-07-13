@@ -1,6 +1,7 @@
 import { Producto, ProductoVendido, Venta } from "../../../types";
 import { AddProductosToVentas, ProductosCSVToMap, VentaXLSXToMap } from "../transformSalesToJson";
 import fs from 'fs';
+import XLSX from "xlsx";
 
 const PurgarProductos = (productosEnDb: Map<string, Producto>, ventas: Venta[]): Producto[] => {
     const productosVendidos: Map<string, ProductoVendido> = new Map()
@@ -40,7 +41,11 @@ ventasMap.forEach((venta, id) => {
 })
 
 const productosPurgados = PurgarProductos(prodMap, ventas)
-fs.writeFile("productosPurgados.json", JSON.stringify(productosPurgados), function (err) {
+const productosWorksheet = XLSX.utils.json_to_sheet(productosPurgados);
+
+const csv = XLSX.utils.sheet_to_csv(productosWorksheet);
+
+fs.writeFile("productosPurgados.csv", csv, function (err) {
     if (err) {
         console.log(err);
     }
