@@ -191,7 +191,7 @@ export const CrearProducto = (p: any): Producto => {
         ean: String(ean),
         cantidad: p.cantidad || p.CANTIDAD,
         cantidadRestock: p.cantidadRestock || p.CANTIDAD_RESTOCK,
-        proveedor: p.proveedor || "" || p.NOMBRE_PROV,
+        proveedor: p.proveedor || p.PROVEEDOR || p.NOMBRE_PROV || "",
         alta: p.alta || p.ALTA || true,
     }
 
@@ -199,11 +199,9 @@ export const CrearProducto = (p: any): Producto => {
 }
 
 export const CrearProductoVendido = (productoEnVenta: any, productoEnDb: Producto): ProductoVendido => {
-    // const precioCompra = productoEnDb.precioCompra || (productoEnVenta.precioConIva / (productoEnVenta.margen / 100) + 1) / ((productoEnVenta.iva / 100) + 1)
-    const precioCompra = productoEnDb.precioCompra
-    if (!precioCompra) {
-        //console.log(productoEnDb);
-    }
+    const precioConIva = (productoEnDb.precioCompra * (productoEnVenta.iva / 100))
+    const margen = (productoEnVenta.precioConIva - precioConIva) / precioConIva
+
     const prod: ProductoVendido = {
         idVenta: productoEnVenta.idVenta,
         _id: productoEnDb._id,
@@ -213,11 +211,11 @@ export const CrearProductoVendido = (productoEnVenta: any, productoEnDb: Product
         dto: productoEnVenta.dto,
         ean: productoEnVenta.ean,
         iva: productoEnVenta.iva,
-        precioCompra: precioCompra,
+        precioCompra: productoEnDb.precioCompra,
         precioVenta: productoEnVenta.precioConIva,
         precioFinal: productoEnVenta.precioConIva - (productoEnVenta.precioConIva * (productoEnVenta.dto / 100)),
-        nombreProveedor: productoEnVenta.nombreProveedor || "",
-        margen: productoEnVenta.margen
+        proveedor: productoEnDb.proveedor || productoEnVenta.proveedor || productoEnVenta.PROVEEDOR || productoEnVenta.NOMBRE_PROV || "",
+        margen: margen
     }
 
     return prod
@@ -227,16 +225,39 @@ let productosMap = ProductosCSVToMap("productos.csv")
 let ventasMap = VentaXLSXToMap("ventas.xlsx");
 ventasMap = AddProductosToVentas(ventasMap, "productosPorVenta.xlsx", productosMap);
 const ventas = Array.from(ventasMap.values());
-const prodEanFixed = Array.from(productosMap.values())
+const particiones = 30;
+const longArray = Math.ceil(ventas.length / particiones);
 
-fs.writeFile("productosEanFixed.csv", JSON.stringify(prodEanFixed), function (err) {
-    if (err) {
-        console.log(err);
-    }
-});
+// const productosWorksheet = XLSX.utils.json_to_sheet(prodEanFixed);
+// const csv = XLSX.utils.sheet_to_csv(productosWorksheet);
+
+// fs.writeFile("productos2.csv", csv, function (err) {
+//     if (err) {
+//         console.log(err);
+//     }
+// });
+
+// fs.writeFile("productosEanFixed.csv", JSON.stringify(prodEanFixed), function (err) {
+//     if (err) {
+//         console.log(err);
+//     }
+// });
 
 fs.writeFile("ventasJsonTPV.json", JSON.stringify(ventas), function (err) {
     if (err) {
         console.log(err);
     }
 });
+
+// for (let i = 0; i < particiones; i++) {
+//     let arraySlice = ventas.slice(i * longArray, (i + 1) * longArray)
+//     if (i + 1 === particiones) {
+//         arraySlice = ventas.slice(-longArray)
+//     }
+
+//     fs.writeFile(`ventasJsonTPV${i}.json`, JSON.stringify(arraySlice), function (err) {
+//         if (err) {
+//             console.log(err);
+//         }
+//     });
+// }
